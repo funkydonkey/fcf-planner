@@ -1,0 +1,8 @@
+streamlit==1.52.2
+pandas==2.3.3
+openpyxl==3.1.2
+sqlalchemy==2.0.27
+openai>=1.57
+openai-agents>=0.4.2
+pyautogen==0.6.0
+python-dotenv==1.0.1
