@@ -1,10 +1,10 @@
 """
-Конфигурация приложения Cash Flow Planner
+Cash Flow Planner application configuration
 """
 import os
 from dotenv import load_dotenv
 
-# Загружаем переменные из .env файла
+# Load variables from .env file
 load_dotenv()
 
 # class ConfigParameters:
@@ -24,8 +24,15 @@ HIST_COL_CATEGORY = os.getenv("HIST_COL_CATEGORY", "category")
 HIST_COL_AMOUNT = os.getenv("HIST_COL_AMOUNT", "amount")
 
 # === AI Agent Configuration ===
-# Модель для прогнозирования
+# Model for forecasting
 FORECAST_MODEL = "gpt-4o-mini"
 
-# Температура для генерации (0 = детерминированный, 1 = креативный)
+# Generation temperature (0 = deterministic, 1 = creative)
 FORECAST_TEMPERATURE = 0.2
+
+# === Driver-Based Forecasting Configuration ===
+# Default forecast periods (months)
+DEFAULT_FORECAST_PERIODS = int(os.getenv("DEFAULT_FORECAST_PERIODS", "12"))
+
+# Monte Carlo simulation count
+MONTE_CARLO_SIMULATIONS = int(os.getenv("MONTE_CARLO_SIMULATIONS", "1000"))

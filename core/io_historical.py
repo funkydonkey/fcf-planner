@@ -1,5 +1,5 @@
 """
-Модуль для чтения и нормализации исторических данных cash flow
+Module for reading and normalizing historical cash flow data
 """
 import pandas as pd
 from typing import Union
@@ -8,56 +8,56 @@ import config
 
 def load_history_from_file(file_path_or_buffer: Union[str, bytes]) -> pd.DataFrame:
     """
-    Загрузка исторических данных из Excel или CSV файла
+    Load historical data from Excel or CSV file
 
-    Поддерживает два формата:
-    1. Старый формат (date, category, amount) - длинный формат
-    2. Новый формат (строки=статьи, столбцы=месяцы) - широкий формат
+    Supports two formats:
+    1. Old format (date, category, amount) - long format
+    2. New format (rows=items, columns=months) - wide format
 
     Args:
-        file_path_or_buffer: Путь к файлу или buffer (для Streamlit uploaded file)
+        file_path_or_buffer: File path or buffer (for Streamlit uploaded file)
 
     Returns:
-        DataFrame с нормализованными колонками: date, category, amount
+        DataFrame with normalized columns: date, category, amount
 
     Raises:
-        ValueError: Если формат файла не поддерживается или данные некорректны
+        ValueError: If file format is not supported or data is invalid
     """
 
-    # Определяем тип файла и читаем
+    # Determine file type and read
     try:
-        # Если это путь к файлу
+        # If it's a file path
         if isinstance(file_path_or_buffer, str):
             if file_path_or_buffer.endswith('.csv'):
                 df = pd.read_csv(file_path_or_buffer)
             elif file_path_or_buffer.endswith(('.xlsx', '.xls')):
                 df = pd.read_excel(file_path_or_buffer)
             else:
-                raise ValueError(f"Неподдерживаемый формат файла: {file_path_or_buffer}")
+                raise ValueError(f"Unsupported file format: {file_path_or_buffer}")
 
-        # Если это buffer (uploaded file из Streamlit)
+        # If it's a buffer (uploaded file from Streamlit)
         else:
-            # Попробуем сначала как Excel
+            # Try as Excel first
             try:
                 df = pd.read_excel(file_path_or_buffer)
             except:
-                # Если не получилось, пробуем как CSV
-                file_path_or_buffer.seek(0)  # Возвращаем указатель в начало
+                # If that fails, try as CSV
+                file_path_or_buffer.seek(0)  # Return pointer to beginning
                 df = pd.read_csv(file_path_or_buffer)
 
     except Exception as e:
-        raise ValueError(f"Ошибка чтения файла: {str(e)}")
+        raise ValueError(f"Error reading file: {str(e)}")
 
-    # Определяем формат файла
+    # Determine file format
     required_cols_old = {
         config.HIST_COL_DATE,
         config.HIST_COL_CATEGORY,
         config.HIST_COL_AMOUNT
     }
 
-    # Проверяем, старый ли это формат (длинный)
+    # Check if this is old format (long)
     if required_cols_old.issubset(df.columns):
-        # Старый формат: date, category, amount
+        # Old format: date, category, amount
         df = df.rename(columns={
             config.HIST_COL_DATE: 'date',
             config.HIST_COL_CATEGORY: 'category',
@@ -65,25 +65,25 @@ def load_history_from_file(file_path_or_buffer: Union[str, bytes]) -> pd.DataFra
         })
         df = df[['date', 'category', 'amount']]
 
-        # Приводим типы данных
+        # Convert data types
         try:
             df['date'] = pd.to_datetime(df['date'])
             df['amount'] = df['amount'].astype(float)
             df['category'] = df['category'].astype(str)
         except Exception as e:
-            raise ValueError(f"Ошибка преобразования типов данных: {str(e)}")
+            raise ValueError(f"Error converting data types: {str(e)}")
 
     else:
-        # Новый формат: первая колонка = статьи, остальные = месяцы
-        # Проверяем, что есть хотя бы 2 колонки
+        # New format: first column = items, rest = months
+        # Check that there are at least 2 columns
         if len(df.columns) < 2:
-            raise ValueError("Файл должен содержать минимум 2 колонки (статья + месяцы)")
+            raise ValueError("File must contain at least 2 columns (item + months)")
 
-        # Первая колонка - это категории
+        # First column is categories
         category_col = df.columns[0]
         month_cols = df.columns[1:]
 
-        # Преобразуем из широкого формата в длинный
+        # Convert from wide format to long
         df_long = df.melt(
             id_vars=[category_col],
             value_vars=month_cols,
@@ -91,12 +91,12 @@ def load_history_from_file(file_path_or_buffer: Union[str, bytes]) -> pd.DataFra
             value_name='amount'
         )
 
-        # Переименовываем колонки
+        # Rename columns
         df_long = df_long.rename(columns={category_col: 'category'})
 
-        # Преобразуем месяцы в даты
+        # Convert months to dates
         try:
-            # Словарь для перевода русских месяцев
+            # Dictionary for translating Russian and English months
             month_map = {
                 'Янв': 1, 'Фев': 2, 'Мар': 3, 'Апр': 4, 'Май': 5, 'Июн': 6,
                 'Июл': 7, 'Авг': 8, 'Сен': 9, 'Окт': 10, 'Ноя': 11, 'Дек': 12,
@@ -104,12 +104,12 @@ def load_history_from_file(file_path_or_buffer: Union[str, bytes]) -> pd.DataFra
                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
             }
 
-            # Пытаемся преобразовать напрямую
+            # Try to convert directly
             try:
                 df_long['date'] = pd.to_datetime(df_long['month'], format='%Y-%m')
             except:
-                # Если не получилось, используем словарь (для коротких названий месяцев)
-                # Предполагаем текущий год
+                # If that fails, use dictionary (for short month names)
+                # Assume current year
                 current_year = pd.Timestamp.now().year
                 df_long['date'] = df_long['month'].apply(
                     lambda x: pd.Timestamp(year=current_year, month=month_map.get(x, 1), day=1)
@@ -119,31 +119,31 @@ def load_history_from_file(file_path_or_buffer: Union[str, bytes]) -> pd.DataFra
             df_long['amount'] = df_long['amount'].astype(float)
             df_long['category'] = df_long['category'].astype(str)
         except Exception as e:
-            raise ValueError(f"Ошибка преобразования месяцев в даты: {str(e)}")
+            raise ValueError(f"Error converting months to dates: {str(e)}")
 
         df = df_long[['date', 'category', 'amount']]
 
-    # Удаляем строки с пустыми значениями
+    # Remove rows with empty values
     df = df.dropna()
 
-    # Сортируем по дате
+    # Sort by date
     df = df.sort_values('date').reset_index(drop=True)
 
-    print(f"✅ Загружено {len(df)} записей из периода {df['date'].min()} - {df['date'].max()}")
-    print(f"   Категорий: {df['category'].nunique()}")
+    print(f"✅ Loaded {len(df)} records from period {df['date'].min()} - {df['date'].max()}")
+    print(f"   Categories: {df['category'].nunique()}")
 
     return df
 
 
 def get_data_summary(df: pd.DataFrame) -> dict:
     """
-    Получить краткую статистику по загруженным данным
+    Get brief statistics on loaded data
 
     Args:
-        df: DataFrame с данными (date, category, amount)
+        df: DataFrame with data (date, category, amount)
 
     Returns:
-        Словарь со статистикой
+        Dictionary with statistics
     """
     return {
         'total_records': len(df),

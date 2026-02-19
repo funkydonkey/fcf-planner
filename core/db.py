@@ -1,61 +1,67 @@
 """
-Модуль работы с базой данных
+Database operations module
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from core.models import Base, Scenario, ScenarioLine
+from core.models import Base, Scenario, ScenarioLine, ScenarioDrivers
 import config
 
 
-# Создаем engine и session factory
+# Create engine and session factory
 engine = create_engine(config.DB_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db():
-    """Инициализация базы данных (создание таблиц)"""
+    """Initialize database (create tables)"""
     Base.metadata.create_all(bind=engine)
-    print(f"✅ База данных инициализирована: {config.DB_URL}")
+    print(f"✅ Database initialized: {config.DB_URL}")
 
 
 def get_db() -> Session:
-    """Получить сессию БД (для использования в контексте)"""
+    """Get DB session (for context use)"""
     db = SessionLocal()
     try:
         return db
     finally:
-        pass  # Закрытие будет вручную
+        pass  # Closing will be manual
 
 
 def save_scenario(
     forecast_period: str,
     rows: List[Dict],
     description: Optional[str] = None,
-    created_by: str = "user"
+    created_by: str = "user",
+    drivers_data: Optional[Dict] = None
 ) -> int:
     """
-    Сохранить сценарий в БД (атомарно)
+    Save scenario to DB (atomically)
 
     Args:
-        forecast_period: Период прогноза (например, "2025-12")
-        rows: Список словарей с полями:
+        forecast_period: Forecast period (e.g., "2025-12")
+        rows: List of dictionaries with fields:
             - category
             - period_date
             - forecast_amount
             - adjustment_amount
             - final_amount
-        description: Описание сценария
-        created_by: Кто создал сценарий
+        description: Scenario description
+        created_by: Who created the scenario
+        drivers_data: Optional dict with driver values:
+            - dso_days, dpo_days, dio_days, ccc_days
+            - revenue_growth_pct, gross_margin_pct
+            - capex_pct (optional), interest_rate_pct (optional)
+            - industry (optional)
 
     Returns:
-        ID созданного сценария
+        ID of created scenario
     """
     db = get_db()
     try:
-        # Создаем сценарий
+        # Create scenario
         scenario = Scenario(
             created_at=datetime.utcnow(),
             created_by=created_by,
@@ -63,9 +69,9 @@ def save_scenario(
             description=description
         )
         db.add(scenario)
-        db.flush()  # Получаем ID сценария
+        db.flush()  # Get scenario ID
 
-        # Добавляем строки
+        # Add lines
         for row in rows:
             line = ScenarioLine(
                 scenario_id=scenario.id,
@@ -76,6 +82,22 @@ def save_scenario(
                 final_amount=row['final_amount']
             )
             db.add(line)
+
+        # Add drivers if provided
+        if drivers_data:
+            drivers = ScenarioDrivers(
+                scenario_id=scenario.id,
+                dso_days=drivers_data['dso_days'],
+                dpo_days=drivers_data['dpo_days'],
+                dio_days=drivers_data['dio_days'],
+                ccc_days=drivers_data['ccc_days'],
+                revenue_growth_pct=drivers_data['revenue_growth_pct'],
+                gross_margin_pct=drivers_data['gross_margin_pct'],
+                capex_pct=drivers_data.get('capex_pct'),
+                interest_rate_pct=drivers_data.get('interest_rate_pct'),
+                industry=drivers_data.get('industry')
+            )
+            db.add(drivers)
 
         db.commit()
         scenario_id = scenario.id
@@ -90,10 +112,10 @@ def save_scenario(
 
 def get_scenarios_list() -> List[Dict]:
     """
-    Получить список всех сценариев
+    Get list of all scenarios
 
     Returns:
-        Список словарей с информацией о сценариях
+        List of dictionaries with scenario information
     """
     db = get_db()
     try:
@@ -101,7 +123,7 @@ def get_scenarios_list() -> List[Dict]:
 
         result = []
         for s in scenarios:
-            # Считаем сумму final_amount
+            # Calculate sum of final_amount
             total_final = sum(line.final_amount for line in s.lines)
 
             result.append({
@@ -121,13 +143,13 @@ def get_scenarios_list() -> List[Dict]:
 
 def get_scenario_lines(scenario_id: int) -> List[Dict]:
     """
-    Получить строки конкретного сценария
+    Get lines of specific scenario
 
     Args:
-        scenario_id: ID сценария
+        scenario_id: Scenario ID
 
     Returns:
-        Список словарей с данными строк
+        List of dictionaries with line data
     """
     db = get_db()
     try:
@@ -146,6 +168,41 @@ def get_scenario_lines(scenario_id: int) -> List[Dict]:
             })
 
         return result
+
+    finally:
+        db.close()
+
+
+def get_scenario_drivers(scenario_id: int) -> Optional[Dict]:
+    """
+    Get drivers for a specific scenario
+
+    Args:
+        scenario_id: Scenario ID
+
+    Returns:
+        Dictionary with driver data or None if no drivers saved
+    """
+    db = get_db()
+    try:
+        drivers = db.query(ScenarioDrivers).filter(
+            ScenarioDrivers.scenario_id == scenario_id
+        ).first()
+
+        if drivers is None:
+            return None
+
+        return {
+            'dso_days': drivers.dso_days,
+            'dpo_days': drivers.dpo_days,
+            'dio_days': drivers.dio_days,
+            'ccc_days': drivers.ccc_days,
+            'revenue_growth_pct': drivers.revenue_growth_pct,
+            'gross_margin_pct': drivers.gross_margin_pct,
+            'capex_pct': drivers.capex_pct,
+            'interest_rate_pct': drivers.interest_rate_pct,
+            'industry': drivers.industry
+        }
 
     finally:
         db.close()

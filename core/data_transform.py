@@ -1,36 +1,36 @@
 """
-Модуль для трансформации данных между длинным и широким форматами
+Module for data transformation between long and wide formats
 """
 import pandas as pd
 from typing import Optional
 
 
 def pivot_to_wide_format(df: pd.DataFrame) -> pd.DataFrame:
-    """.
-    Преобразование данных из длинного формата (date, category, amount)
-    в широкий формат (строки=категории, столбцы=месяцы)
+    """
+    Transform data from long format (date, category, amount)
+    to wide format (rows=categories, columns=months)
 
     Args:
-        df: DataFrame с колонками date, category, amount
+        df: DataFrame with columns date, category, amount
 
     Returns:
-        DataFrame в широком формате (категории × месяцы)
+        DataFrame in wide format (categories × months)
     """
-    # Создаем колонку с названиями месяцев (формат "Янв 2025")
+    # Create column with month names (format "Jan 2025")
     df_copy = df.copy()
     df_copy['month_name'] = df_copy['date'].dt.strftime('%b %Y')
 
-    # Словарь для перевода английских месяцев на русские (опционально)
-    month_translation = {
-        'Jan': 'Янв', 'Feb': 'Фев', 'Mar': 'Мар', 'Apr': 'Апр',
-        'May': 'Май', 'Jun': 'Июн', 'Jul': 'Июл', 'Aug': 'Авг',
-        'Sep': 'Сен', 'Oct': 'Окт', 'Nov': 'Ноя', 'Dec': 'Дек'
-    }
+    # Month translation dictionary (commented out - keeping English)
+    # month_translation = {
+    #     'Jan': 'Янв', 'Feb': 'Фев', 'Mar': 'Мар', 'Apr': 'Апр',
+    #     'May': 'Май', 'Jun': 'Июн', 'Jul': 'Июл', 'Aug': 'Авг',
+    #     'Sep': 'Сен', 'Oct': 'Окт', 'Nov': 'Ноя', 'Dec': 'Дек'
+    # }
 
     # for eng, rus in month_translation.items():
     #     df_copy['month_name'] = df_copy['month_name'].str.replace(eng, rus)
 
-    # Pivot: категории в строки, месяцы в столбцы
+    # Pivot: categories to rows, months to columns
     df_wide = df_copy.pivot_table(
         index='category',
         columns='month_name',
@@ -38,16 +38,16 @@ def pivot_to_wide_format(df: pd.DataFrame) -> pd.DataFrame:
         aggfunc='sum'
     )
 
-    # Сортируем столбцы по дате
-    # Преобразуем обратно в даты для сортировки
+    # Sort columns by date
+    # Convert back to dates for sorting
     month_dates = df_copy[['month_name', 'date']].drop_duplicates()
     month_dates = month_dates.sort_values('date')
     sorted_months = month_dates['month_name'].tolist()
 
-    # Переупорядочиваем столбцы
+    # Reorder columns
     df_wide = df_wide[sorted_months]
 
-    # Сбрасываем индекс, чтобы category стала обычной колонкой
+    # Reset index to make category a regular column
     df_wide = df_wide.reset_index()
 
     return df_wide
@@ -59,25 +59,25 @@ def add_forecast_columns(
     forecast_values: Optional[pd.Series] = None
 ) -> pd.DataFrame:
     """
-    Добавляет три колонки для следующего месяца: Прогноз, Корректировки, Итого
+    Adds three columns for next month: Forecast, Adjustments, Total
 
     Args:
-        df_wide: DataFrame в широком формате (результат pivot_to_wide_format)
-        next_month_name: Название следующего месяца (например, "Ноя 2025")
-        forecast_values: Опциональный Series с прогнозными значениями для каждой категории
+        df_wide: DataFrame in wide format (result of pivot_to_wide_format)
+        next_month_name: Next month name (e.g., "Nov 2025")
+        forecast_values: Optional Series with forecast values for each category
 
     Returns:
-        DataFrame с добавленными колонками для прогноза
+        DataFrame with added forecast columns
     """
     df_result = df_wide.copy()
 
-    # Создаем составные названия колонок
-    forecast_col = f"{next_month_name}_Прогноз"
-    comment_col = f"{next_month_name}_Комментарии"
-    adjustment_col = f"{next_month_name}_Корректировки"
-    total_col = f"{next_month_name}_Итого"
+    # Create composite column names
+    forecast_col = f"{next_month_name}_Forecast"
+    comment_col = f"{next_month_name}_Comments"
+    adjustment_col = f"{next_month_name}_Adjustments"
+    total_col = f"{next_month_name}_Total"
 
-    # Добавляем колонки
+    # Add columns
     if forecast_values is not None:
         df_result[forecast_col] = forecast_values
     else:
@@ -93,29 +93,29 @@ def add_forecast_columns(
 
 def get_next_month_name(df: pd.DataFrame, result="string") -> str:
     """
-    Определяет название следующего месяца после последней даты в данных
+    Determines the name of next month after the latest date in data
 
     Args:
-        df: DataFrame с колонкой date
-        result: Тип результата ('string' или 'date')
+        df: DataFrame with date column
+        result: Result type ('string' or 'date')
 
     Returns:
-        Строка с названием месяца в формате "Янв 2025"
+        String with month name in format "Jan 2025"
     """
     max_date = df['date'].max()
     next_month_date = max_date + pd.DateOffset(months=1)
 
     month_name = next_month_date.strftime('%b %Y')
 
-    # Перевод на русский
-    month_translation = {
-        'Jan': 'Янв', 'Feb': 'Фев', 'Mar': 'Мар', 'Apr': 'Апр',
-        'May': 'Май', 'Jun': 'Июн', 'Jul': 'Июл', 'Aug': 'Авг',
-        'Sep': 'Сен', 'Oct': 'Окт', 'Nov': 'Ноя', 'Dec': 'Дек'
-    }
+    # Translation to Russian (commented out - keeping English)
+    # month_translation = {
+    #     'Jan': 'Янв', 'Feb': 'Фев', 'Mar': 'Мар', 'Apr': 'Апр',
+    #     'May': 'Май', 'Jun': 'Июн', 'Jul': 'Июл', 'Aug': 'Авг',
+    #     'Sep': 'Сен', 'Oct': 'Окт', 'Nov': 'Ноя', 'Dec': 'Дек'
+    # }
 
-    for eng, rus in month_translation.items():
-        month_name = month_name.replace(eng, rus)
+    # for eng, rus in month_translation.items():
+    #     month_name = month_name.replace(eng, rus)
 
     if result == 'string':
         return month_name

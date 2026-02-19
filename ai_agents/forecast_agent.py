@@ -14,12 +14,12 @@ class ForecastAgentResponse(BaseModel):
 
 class ForecastAgent:
     """
-    AI agent that generates forecasts based on give dataframe with historical data
+    AI agent that generates forecasts based on given dataframe with historical data
     """
-    def __init__(self): 
+    def __init__(self):
         """
-        Инициализация агента
-        
+        Agent initialization
+
         """
         self.agent =  Agent(
         name="forecast_agent",
@@ -36,18 +36,18 @@ class ForecastAgent:
         
     async def build_cashflow_forecast(self, df: pd.DataFrame, last_period:  Any) -> pd.DataFrame:
         """
-        Генерирует прогноз на следующий месяц по всем категориям
+        Generates forecast for next month across all categories
 
         Args:
-            df: DataFrame с данными (category, month, amount)
-            last_period: последний месяц
+            df: DataFrame with data (category, month, amount)
+            last_period: last month
 
         Returns:
-            DataFrame с прогнозом:
-            - period: период прогноза (например "2024-12")
-            - category: категория
-            - forecast_amount: прогноз от AI
-            - adjustment: 0 (по умолчанию)
+            DataFrame with forecast:
+            - period: forecast period (e.g., "2024-12")
+            - category: category
+            - forecast_amount: AI forecast
+            - adjustment: 0 (default)
             - final_amount: = forecast_amount
         """
 

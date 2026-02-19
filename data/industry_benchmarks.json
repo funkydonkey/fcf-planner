@@ -1,0 +1,37 @@
+{
+    "retail": {
+        "dso": 15,
+        "dpo": 30,
+        "dio": 45,
+        "gross_margin": 30,
+        "revenue_growth": 5
+    },
+    "manufacturing": {
+        "dso": 45,
+        "dpo": 40,
+        "dio": 60,
+        "gross_margin": 25,
+        "revenue_growth": 3
+    },
+    "services": {
+        "dso": 35,
+        "dpo": 25,
+        "dio": 5,
+        "gross_margin": 45,
+        "revenue_growth": 8
+    },
+    "technology": {
+        "dso": 50,
+        "dpo": 35,
+        "dio": 20,
+        "gross_margin": 60,
+        "revenue_growth": 15
+    },
+    "healthcare": {
+        "dso": 55,
+        "dpo": 35,
+        "dio": 30,
+        "gross_margin": 40,
+        "revenue_growth": 6
+    }
+}
